@@ -1,23 +1,70 @@
 import Topic from "@/models/topic"
 import { NextResponse } from "next/server"
-import connectMongoDB from "./../../../src/libs/mongodb"
+import connectMongoDB from "../../../src/libs/mongodb"
 
 export async function POST(request) {
-  const { title, description } = await request.json()
-  await connectMongoDB()
-  await Topic.create({ title, description })
-  return NextResponse.json({ message: "Topic Created " }, { status: 201 })
+  try {
+    const { title, description } = await request.json()
+
+    if (!title || !description) {
+      return NextResponse.json(
+        { error: "title and description are required" },
+        { status: 400 }
+      )
+    }
+
+    await connectMongoDB()
+    await Topic.create({ title, description })
+
+    return NextResponse.json({ message: "Topic Created" }, { status: 201 })
+  } catch (error) {
+    console.error(error)
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 }
+    )
+  }
 }
 
 export async function GET() {
-  await connectMongoDB()
-  const topics = await Topic.find()
-  return NextResponse.json({ topics })
+  try {
+    await connectMongoDB()
+    const topics = await Topic.find()
+
+    return NextResponse.json({ topics }, { status: 200 })
+  } catch (error) {
+    console.error(error)
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 }
+    )
+  }
 }
 
 export async function DELETE(request) {
-  const id = request.nextUrl.searchParams.get("id")
-  await connectMongoDB()
-  await Topic.findByIdAndDelete(id)
-  return NextResponse.json.json({ message: "Topic Deleted" }, { status: 200 })
+  try {
+    const id = request.nextUrl.searchParams.get("id")
+
+    if (!id) {
+      return NextResponse.json(
+        { error: "ID parameter is required" },
+        { status: 400 }
+      )
+    }
+
+    await connectMongoDB()
+    const deletedTopic = await Topic.findByIdAndDelete(id)
+
+    if (!deletedTopic) {
+      return NextResponse.json({ error: "Topic not found" }, { status: 404 })
+    }
+
+    return NextResponse.json({ message: "Topic Deleted" }, { status: 200 })
+  } catch (error) {
+    console.error(error)
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 }
+    )
+  }
 }
